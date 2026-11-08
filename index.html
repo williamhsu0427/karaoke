@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1a1030">
+<title>歡唱包廂</title>
+<link rel="manifest" href="manifest.json?v=1">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+:root{--bg:#120b22;--card:#1e1535;--card2:#2a1f47;--text:#f3eefc;--sub:#a99cc7;--line:#3a2d5c;--pink:#ff4fa3;--cyan:#38d9f5;--gold:#ffc94a;--green:#4be08a;--red:#ff6b6b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:linear-gradient(90deg,#2b1250,#4a1650)}
+header h1{font-size:19px;margin:0;flex:1;letter-spacing:1px}
+header h1 b{color:var(--pink)}
+.chip{background:rgba(255,255,255,.12);border:0;border-radius:99px;padding:6px 12px;font-size:14px}
+nav{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
+nav button{flex:1;background:none;border:0;padding:11px 0;font-size:15px;color:var(--sub);border-bottom:3px solid transparent}
+nav button.on{color:var(--text);border-color:var(--pink)}
+nav .badge{background:var(--pink);color:#fff;border-radius:99px;font-size:11px;padding:1px 6px;margin-left:4px}
+main{flex:1;overflow:auto;padding:12px 14px calc(20px + env(safe-area-inset-bottom))}
+.tab{display:none}.tab.on{display:block}
+.row{display:flex;gap:8px;align-items:center}
+.btn{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:9px 14px;font-size:15px}
+.btn.pri{background:linear-gradient(135deg,var(--pink),#b04fff);border:0;color:#fff;font-weight:600}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:10px}
+input[type=text],input[type=search],textarea{width:100%;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:10px 12px;font-size:16px;font-family:inherit}
+textarea{min-height:200px;font-size:14px;line-height:1.5}
+.song{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-top:9px}
+.song .t{font-size:16px;font-weight:600;word-break:break-all}
+.song .a{font-size:13px;color:var(--sub);margin-top:2px}
+.song .acts{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.tag{font-size:11px;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:2px;font-weight:500}
+.tag.ok{background:rgba(75,224,138,.18);color:var(--green)}
+.tag.no{background:rgba(255,201,74,.16);color:var(--gold)}
+.empty{color:var(--sub);text-align:center;padding:40px 10px;line-height:1.8}
+.hint{color:var(--sub);font-size:13px;line-height:1.6}
+h3{margin:18px 0 6px;font-size:15px;color:var(--sub);font-weight:600}
+/* 播放畫面 */
+#stage{position:fixed;inset:0;background:#05020c;display:none;z-index:20;overflow:hidden}
+#stage.on{display:block}
+#bgv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.55}
+#bgfx{position:absolute;inset:0;background:radial-gradient(circle at 20% 30%,#4a1666 0,transparent 55%),radial-gradient(circle at 80% 70%,#103c5c 0,transparent 55%);animation:hue 18s linear infinite}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+#pitch{position:absolute;left:0;right:0;top:calc(54px + env(safe-area-inset-top));height:120px;width:100%}
+#topbar{position:absolute;left:0;right:0;top:0;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;background:linear-gradient(#000a,transparent);transition:opacity .4s}
+#topbar .ti{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+#live{font-size:22px;font-weight:700;color:var(--gold);min-width:56px;text-align:right}
+#lyr{position:absolute;left:0;right:0;top:44%;transform:translateY(-50%);padding:0 18px;text-align:center}
+.ly{font-size:clamp(22px,6.4vw,46px);font-weight:800;line-height:1.35;margin:10px 0;text-shadow:0 2px 8px #000;word-break:break-word}
+.ly.cur{background:linear-gradient(90deg,var(--cyan) var(--p,0%),#fff var(--p,0%));-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 2px 6px #000)}
+.ly.nx{opacity:.6;font-size:clamp(17px,4.8vw,34px)}
+#dots{height:22px;font-size:20px;color:var(--pink);letter-spacing:6px}
+#plain{position:absolute;inset:190px 18px 170px;overflow:auto;text-align:center;font-size:20px;line-height:1.9;text-shadow:0 2px 6px #000;display:none}
+#ctrl{position:absolute;left:0;right:0;bottom:0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(transparent,#000d 30%);transition:opacity .4s}
+.hide #ctrl,.hide #topbar{opacity:0;pointer-events:none}
+#seek{width:100%;accent-color:var(--pink)}
+.tm{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-top:-2px}
+.cg{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.cg button,.seg button{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 11px;font-size:14px;color:#fff;min-width:44px}
+.cg button.on{background:var(--pink);border-color:var(--pink)}
+.seg{display:inline-flex;border-radius:12px;overflow:hidden}
+.seg button{border-radius:0;margin:0}
+.seg button.on{background:var(--cyan);color:#06222a;font-weight:700}
+.big{font-size:20px!important;padding:8px 18px!important}
+.val{display:inline-block;min-width:34px;text-align:center;font-size:14px}
+.kbox{display:inline-flex;align-items:center;background:rgba(255,255,255,.08);border-radius:12px}
+.kbox button{background:none;border:0}
+/* 視窗 */
+.modal{position:fixed;inset:0;background:#000b;z-index:40;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 10px;font-size:18px}
+.res{background:var(--card2);border-radius:12px;padding:9px 11px;margin-top:7px;cursor:pointer}
+.res small{color:var(--sub)}
+#scoreN{font-size:84px;font-weight:900;text-align:center;background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+.lineacc{display:flex;gap:8px;font-size:14px;padding:5px 0;border-bottom:1px solid var(--line)}
+.lineacc span:first-child{width:46px;text-align:right;font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#000d;color:#fff;padding:10px 16px;border-radius:12px;z-index:60;font-size:14px;max-width:90vw;text-align:center;display:none}
+.singer{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-top:9px}
+.singer.cur{border-color:var(--pink)}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:17px;color:#fff;flex:none}
+.prog{height:6px;background:var(--line);border-radius:6px;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;background:var(--cyan);width:0}
+
+/* 電腦、電視大螢幕 */
+@media (min-width:900px){
+ main{max-width:1000px;margin:0 auto;width:100%}
+ #bookList{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+ #pitch{height:170px}
+ .ly{font-size:clamp(34px,5.2vw,84px)}.ly.nx{font-size:clamp(26px,3.6vw,58px)}
+ #ctrl{padding-left:max(12px,calc(50% - 520px));padding-right:max(12px,calc(50% - 520px))}
+ .kbhint{display:block!important}
+}
+/* 手機橫放 */
+@media (max-height:500px) and (orientation:landscape){
+ #pitch{height:70px;top:44px}#lyr{top:40%}.ly{font-size:clamp(20px,4.5vw,40px);margin:4px 0}
+ .cg{margin-top:4px}.cg button{padding:6px 9px}
+}
+.kbhint{display:none;margin-top:14px}
+kbd{background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎤 歡唱<b>包廂</b></h1>
+  <button class="chip" id="singerChip" onclick="tab('singers')">歌手：—</button>
+</header>
+<nav>
+  <button class="on" data-t="book" onclick="tab('book')">歌本</button>
+  <button data-t="queue" onclick="tab('queue')">預約<span class="badge" id="qn" hidden>0</span></button>
+  <button data-t="singers" onclick="tab('singers')">歌手紀錄</button>
+</nav>
+<main>
+  <section class="tab on" id="t-book">
+    <div class="row">
+      <input type="search" id="q" placeholder="搜尋歌名、歌手" oninput="renderBook()">
+      <button class="btn pri" onclick="$('#file').click()" style="white-space:nowrap">＋ 加歌</button>
+    </div>
+    <input type="file" id="file" accept="audio/*,video/*,.mp3,.m4a,.mp4,.wav,.flac,.ogg,.webm,.mov" multiple hidden onchange="addFiles([...this.files]);this.value=''">
+    <div id="addProg" hidden><div class="hint" id="addMsg"></div><div class="prog"><i id="addBar"></i></div></div>
+    <div id="bookList"></div>
+    <div class="hint kbhint">鍵盤快捷鍵（唱歌時）：<kbd>空白</kbd> 播放/暫停　<kbd>←</kbd><kbd>→</kbd> 倒退/快轉 5 秒　<kbd>↑</kbd><kbd>↓</kbd> 升降 Key　<kbd>V</kbd> 原唱/導唱/伴唱　<kbd>M</kbd> 評分麥克風　<kbd>L</kbd> 練這句　<kbd>F</kbd> 全螢幕　<kbd>Esc</kbd> 結束<br>接電視：用 HDMI 線接電腦，或用手機的「螢幕鏡像 / 投放」到電視，再按全螢幕。</div>
+  </section>
+  <section class="tab" id="t-queue"><div id="queueList"></div></section>
+  <section class="tab" id="t-singers">
+    <div class="row"><input type="text" id="newSinger" placeholder="新增歌手名字"><button class="btn pri" onclick="addSinger()">新增</button></div>
+    <div id="singerList"></div>
+  </section>
+</main>
+
+<!-- 唱歌畫面 -->
+<div id="stage">
+  <video id="bgv" muted playsinline hidden></video>
+  <div id="bgfx"></div>
+  <div id="topbar">
+    <button class="chip" onclick="stopSong(true)">✕</button>
+    <div class="ti" id="stTitle"></div>
+    <button class="chip" id="bFs" onclick="toggleFs()" title="全螢幕">⛶ 全螢幕</button>
+    <div id="live" title="即時分數"></div>
+  </div>
+  <canvas id="pitch"></canvas>
+  <div id="lyr"><div id="dots"></div><div class="ly cur" id="l1"></div><div class="ly nx" id="l2"></div></div>
+  <div id="plain"></div>
+  <div id="ctrl">
+    <input type="range" id="seek" min="0" max="1000" value="0">
+    <div class="tm"><span id="tNow">0:00</span><span id="tLeft">0:00</span></div>
+    <div class="cg">
+      <div class="seg" id="vmode">
+        <button data-v="orig">原唱</button><button data-v="guide">導唱</button><button data-v="kara" class="on">伴唱</button>
+      </div>
+      <span class="kbox"><button onclick="setKey(-1)">♭</button><span class="val" id="kv">Key 0</span><button onclick="setKey(1)">♯</button></span>
+    </div>
+    <div class="cg">
+      <button onclick="skip(-5)">⏪</button>
+      <button class="big" id="pp" onclick="togglePlay()">⏸</button>
+      <button onclick="skip(5)">⏩</button>
+      <button id="bMic" onclick="toggleMic()">🎤 評分</button>
+      <button id="bMon" onclick="toggleMon()">🔊 耳返</button>
+      <button id="bRec" onclick="toggleRec()">⏺ 錄音</button>
+      <button id="bLoop" onclick="toggleLoop()">🔁 練這句</button>
+      <button id="bSpd" onclick="cycleSpeed()">速度 1.0</button>
+      <button onclick="openLyrics(cur.song.id,true)">📝 歌詞</button>
+    </div>
+  </div>
+</div>
+
+<!-- 歌詞編輯 -->
+<div class="modal" id="mLyr"><div class="sheet">
+  <h2>歌詞 <small class="hint" id="lyrSong"></small></h2>
+  <div class="row"><input type="text" id="lyrQ" placeholder="歌名 歌手"><button class="btn pri" onclick="searchLyrics()">找歌詞</button></div>
+  <div class="hint" style="margin-top:4px">從公開歌詞庫 LRCLIB 搜尋，標示「有時間軸」的才會跟著音樂跑。</div>
+  <div id="lyrRes"></div>
+  <h3>歌詞內容（LRC 格式，[分:秒] 開頭）</h3>
+  <textarea id="lyrTxt" placeholder="[00:12.30] 第一句&#10;[00:16.80] 第二句&#10;&#10;也可以只貼純文字歌詞，再用下面的「手動對時」"></textarea>
+  <div class="row" style="margin-top:8px;flex-wrap:wrap">
+    <button class="btn sm" onclick="toTrad()">簡→繁</button>
+    <button class="btn sm" onclick="shiftLrc(-0.5)">整體提早 0.5 秒</button>
+    <button class="btn sm" onclick="shiftLrc(0.5)">整體延後 0.5 秒</button>
+    <button class="btn sm" onclick="startTapSync()">手動對時</button>
+  </div>
+  <div class="row" style="margin-top:12px"><button class="btn" style="flex:1" onclick="closeM('mLyr')">取消</button><button class="btn pri" style="flex:2" onclick="saveLyrics()">儲存</button></div>
+</div></div>
+
+<!-- 手動對時 -->
+<div class="modal" id="mTap"><div class="sheet" style="text-align:center">
+  <h2>手動對時</h2>
+  <div class="hint">音樂開始後，每一句「開始唱」的那一刻按一下大按鈕。</div>
+  <div style="margin:16px 0;font-size:14px;color:var(--sub)" id="tapPrev"></div>
+  <div style="font-size:24px;font-weight:800;min-height:64px" id="tapCur"></div>
+  <div style="font-size:15px;color:var(--sub);min-height:22px" id="tapNext"></div>
+  <button class="btn pri" style="width:100%;height:90px;font-size:22px;margin-top:14px" id="tapBtn" onclick="tapNext()">開始播放</button>
+  <div class="row" style="margin-top:10px"><button class="btn" style="flex:1" onclick="tapUndo()">上一句重來</button><button class="btn" style="flex:1" onclick="endTap(false)">放棄</button></div>
+</div></div>
+
+<!-- 分數 -->
+<div class="modal" id="mScore"><div class="sheet">
+  <div class="hint" style="text-align:center" id="scSong"></div>
+  <div id="scoreN">0</div>
+  <div style="text-align:center;font-size:18px;font-weight:700" id="scWord"></div>
+  <div class="hint" style="text-align:center;margin-top:4px" id="scDetail"></div>
+  <div id="scRec" style="margin-top:10px"></div>
+  <h3>每一句的音準（紅色是要加強的）</h3>
+  <div id="scLines"></div>
+  <div class="row" style="margin-top:14px"><button class="btn" style="flex:1" onclick="closeM('mScore')">回歌本</button><button class="btn pri" style="flex:2" id="scNext" onclick="playNext()">下一首</button></div>
+</div></div>
+
+<!-- 選歌手 / 歌曲選單 -->
+<div class="modal" id="mMenu"><div class="sheet" id="menuBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=t=>{t=Math.max(0,t|0);return (t/60|0)+':'+String(t%60).padStart(2,'0')};
+function toast(m,ms=2600){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms)}
+function closeM(id){$('#'+id).classList.remove('on')}
+function openM(id){$('#'+id).classList.add('on')}
+function tab(n){document.querySelectorAll('.tab').forEach(e=>e.classList.toggle('on',e.id==='t-'+n));document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===n));if(n==='singers')renderSingers();if(n==='queue')renderQueue()}
+const LS={get(k,d){try{const v=localStorage.getItem('kroom_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('kroom_'+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- 資料庫（歌曲檔案存在手機裡，不上傳） ---------- */
+let db;
+function openDB(){return new Promise((ok,no)=>{const r=indexedDB.open('kroom',1);r.onupgradeneeded=()=>r.result.createObjectStore('songs',{keyPath:'id'});r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}
+function tx(mode,fn){return new Promise((ok,no)=>{const t=db.transaction('songs',mode);const s=t.objectStore('songs');const r=fn(s);t.oncomplete=()=>ok(r&&r.result);t.onerror=()=>no(t.error)})}
+const dbAll=()=>tx('readonly',s=>s.getAll());
+const dbPut=o=>tx('readwrite',s=>s.put(o));
+const dbDel=id=>tx('readwrite',s=>s.delete(id));
+let songs=[];
+let singers=LS.get('singers',[{id:'s1',name:'我',color:'#ff4fa3'}]);
+let curSinger=LS.get('curSinger','s1');
+let hist=LS.get('hist',[]);
+let queue=LS.get('queue',[]);
+const COLORS=['#ff4fa3','#38d9f5','#ffc94a','#4be08a','#b04fff','#ff8a4f','#4f8aff'];
+
+/* ---------- 歌本 ---------- */
+function parseName(n){n=n.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ').replace(/\s*[\(\[【（](官方|official|MV|lyric|歌詞|高清|HD|4K|Audio)[^\)\]】）]*[\)\]】）]/ig,'').trim();
+  const m=n.split(/\s+-\s+|\s*－\s*|\s*–\s*/);if(m.length>=2)return{artist:m[0].trim(),title:m.slice(1).join(' - ').trim()};return{artist:'',title:n}}
+async function addFiles(files){
+  if(!files.length)return;
+  $('#addProg').hidden=false;
+  let i=0;
+  for(const f of files){
+    i++;$('#addMsg').textContent=`處理中 ${i}/${files.length}：${f.name}（分析旋律中，約需幾秒）`;$('#addBar').style.width='5%';
+    try{
+      const {artist,title}=parseName(f.name);
+      const song={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),title,artist,file:f,type:f.type||'',isVideo:/^video/.test(f.type)||/\.(mp4|mov|webm|mkv)$/i.test(f.name),lrc:'',added:Date.now()};
+      const ab=await f.arrayBuffer();
+      const buf=await audioCtx().decodeAudioData(ab);
+      song.duration=buf.duration;song.mono=isMono(buf);
+      song.ref=await extractMelody(buf,p=>$('#addBar').style.width=(5+p*90)+'%');
+      await dbPut(song);songs.push(song);
+      autoLyrics(song);
+    }catch(e){console.error(e);toast('「'+f.name+'」無法讀取，請換 mp3 / m4a / mp4 試試',4000)}
+  }
+  $('#addProg').hidden=true;renderBook();
+}
+function isMono(buf){if(buf.numberOfChannels<2)return true;const a=buf.getChannelData(0),b=buf.getChannelData(1);let d=0,s=0;for(let i=0;i<a.length;i+=97){d+=Math.abs(a[i]-b[i]);s+=Math.abs(a[i])}return d<s*0.02}
+async function autoLyrics(song){
+  try{const r=await lrcSearch(song.artist?song.artist+' '+song.title:song.title);
+    const best=pickBest(r,song);if(best){song.lrc=best.syncedLyrics;await dbPut(song);renderBook();toast('已自動找到《'+song.title+'》的歌詞')}}catch(e){}
+}
+function pickBest(list,song){const c=list.filter(x=>x.syncedLyrics);if(!c.length)return null;c.sort((a,b)=>Math.abs(a.duration-song.duration)-Math.abs(b.duration-song.duration));return Math.abs(c[0].duration-song.duration)<=4?c[0]:null}
+function renderBook(){
+  const q=$('#q').value.trim().toLowerCase();
+  const list=songs.filter(s=>!q||(s.title+' '+s.artist).toLowerCase().includes(q)).sort((a,b)=>b.added-a.added);
+  if(!songs.length){$('#bookList').innerHTML=`<div class="empty">歌本還是空的<br>按「＋ 加歌」選手機或電腦裡的音樂、MV 檔<br><span class="hint">檔名用「歌手 - 歌名」最容易自動找到歌詞<br>歌曲只存在這台裝置，不會上傳</span></div>`;return}
+  $('#bookList').innerHTML=list.map(s=>`<div class="song"><div class="t">${esc(s.title)}${s.lrc?(hasTime(s.lrc)?'<span class="tag ok">歌詞</span>':'<span class="tag no">歌詞未對時</span>'):'<span class="tag no">沒歌詞</span>'}${s.isVideo?'<span class="tag ok">MV</span>':''}</div>
+  <div class="a">${esc(s.artist||'未知歌手')} · ${fmt(s.duration)}</div>
+  <div class="acts"><button class="btn sm pri" onclick="playNow('${s.id}')">▶ 立即唱</button><button class="btn sm" onclick="enqueue('${s.id}',false)">預約</button><button class="btn sm" onclick="enqueue('${s.id}',true)">插播</button><button class="btn sm" onclick="songMenu('${s.id}')">⋯</button></div></div>`).join('')||'<div class="empty">找不到符合的歌</div>';
+}
+function songMenu(id){const s=songs.find(x=>x.id===id);
+  $('#menuBody').innerHTML=`<h2>${esc(s.title)}</h2>
+  <div class="row" style="margin-bottom:8px"><input type="text" id="eT" value="${esc(s.title)}" placeholder="歌名"></div>
+  <div class="row" style="margin-bottom:12px"><input type="text" id="eA" value="${esc(s.artist)}" placeholder="歌手"></div>
+  <div class="row" style="flex-wrap:wrap"><button class="btn" onclick="saveMeta('${id}')">儲存歌名</button><button class="btn" onclick="closeM('mMenu');openLyrics('${id}')">📝 編輯歌詞</button><button class="btn" style="color:var(--red)" onclick="delSong('${id}')">刪除</button><button class="btn" onclick="closeM('mMenu')">關閉</button></div>`;openM('mMenu')}
+async function saveMeta(id){const s=songs.find(x=>x.id===id);s.title=$('#eT').value.trim()||s.title;s.artist=$('#eA').value.trim();await dbPut(s);closeM('mMenu');renderBook()}
+async function delSong(id){if(!confirm('確定從歌本刪除？'))return;await dbDel(id);songs=songs.filter(s=>s.id!==id);queue=queue.filter(q=>q.songId!==id);LS.set('queue',queue);closeM('mMenu');renderBook();renderQueue()}
+
+/* ---------- 預約 ---------- */
+function enqueue(id,front){const it={songId:id,singer:curSinger};if(front)queue.unshift(it);else queue.push(it);LS.set('queue',queue);renderQueue();const s=songs.find(x=>x.id===id);toast((front?'已插播：':'已預約：')+s.title+(cur?'':'（到「預約」按開始）'))}
+function renderQueue(){
+  $('#qn').hidden=!queue.length;$('#qn').textContent=queue.length;
+  const el=$('#queueList');if(!el)return;
+  if(!queue.length){el.innerHTML='<div class="empty">還沒有預約的歌<br><span class="hint">在歌本按「預約」或「插播」</span></div>';return}
+  el.innerHTML=`<button class="btn pri" style="width:100%;margin-bottom:4px" onclick="playNext()">▶ 開始唱下一首</button>`+queue.map((q,i)=>{const s=songs.find(x=>x.id===q.songId)||{title:'(已刪除)'};const g=singerOf(q.singer);
+    return `<div class="song"><div class="t">${i+1}. ${esc(s.title)}</div><div class="a">${esc(s.artist||'')} · 演唱：${esc(g.name)}</div><div class="acts">${i?`<button class="btn sm" onclick="qMove(${i},-1)">↑ 往前</button>`:''}<button class="btn sm" onclick="qDel(${i})">取消</button></div></div>`}).join('');
+}
+function qMove(i,d){const [x]=queue.splice(i,1);queue.splice(i+d,0,x);LS.set('queue',queue);renderQueue()}
+function qDel(i){queue.splice(i,1);LS.set('queue',queue);renderQueue()}
+function playNext(){closeM('mScore');const it=queue.shift();LS.set('queue',queue);renderQueue();if(!it){toast('預約清單是空的');return}if(it.singer){curSinger=it.singer;LS.set('curSinger',curSinger);renderChip()}startSong(it.songId)}
+function playNow(id){startSong(id)}
+
+/* ---------- 歌手 ---------- */
+const singerOf=id=>singers.find(s=>s.id===id)||singers[0];
+function renderChip(){$('#singerChip').textContent='歌手：'+singerOf(curSinger).name}
+function addSinger(){const n=$('#newSinger').value.trim();if(!n)return;const s={id:'s'+Date.now().toString(36),name:n,color:COLORS[singers.length%COLORS.length]};singers.push(s);LS.set('singers',singers);$('#newSinger').value='';curSinger=s.id;LS.set('curSinger',curSinger);renderChip();renderSingers()}
+function pickSinger(id){curSinger=id;LS.set('curSinger',id);renderChip();renderSingers()}
+function delSinger(id){if(singers.length<2)return toast('至少要留一位歌手');if(!confirm('刪除這位歌手？（歷史分數保留）'))return;singers=singers.filter(s=>s.id!==id);LS.set('singers',singers);if(curSinger===id)pickSinger(singers[0].id);renderSingers()}
+function renderSingers(){
+  $('#singerList').innerHTML='<div class="hint" style="margin-top:8px">點名字切換「現在唱的人」。預約時會記住是誰點的歌。</div>'+singers.map(s=>{const h=hist.filter(x=>x.singer===s.id);const best=h.length?Math.max(...h.map(x=>x.score)):'-';const avg=h.length?Math.round(h.reduce((a,b)=>a+b.score,0)/h.length):'-';
+    return `<div class="singer ${s.id===curSinger?'cur':''}" onclick="pickSinger('${s.id}')"><div class="av" style="background:${s.color}">${esc(s.name[0])}</div><div style="flex:1"><div style="font-weight:600">${esc(s.name)}${s.id===curSinger?' <span class="tag ok">正在唱</span>':''}</div><div class="hint">唱了 ${h.length} 首 · 最高 ${best} · 平均 ${avg}</div></div><button class="btn sm" onclick="event.stopPropagation();delSinger('${s.id}')">刪</button></div>`}).join('')+
+  '<h3>最近紀錄</h3>'+(hist.slice(-30).reverse().map(h=>`<div class="lineacc"><span style="color:var(--gold)">${h.score}</span><span style="flex:1">${esc(h.title)}<br><small class="hint">${esc(singerOf(h.singer).name)} · ${new Date(h.date).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</small></span></div>`).join('')||'<div class="hint">還沒有紀錄，開啟「🎤 評分」唱完一首就會出現。</div>');
+}
+
+/* ---------- 歌詞 ---------- */
+const hasTime=t=>/\[\d+:\d+/.test(t||'');
+function parseLrc(t){const out=[];(t||'').split(/\r?\n/).forEach(l=>{const tags=[...l.matchAll(/\[(\d+):(\d+(?:[.:]\d+)?)\]/g)];if(!tags.length)return;const txt=l.replace(/\[[^\]]*\]/g,'').trim();tags.forEach(m=>out.push({t:+m[1]*60+parseFloat(m[2].replace(':','.')),text:txt}))});out.sort((a,b)=>a.t-b.t);return out}
+function plainLines(t){return (t||'').split(/\r?\n/).map(l=>l.replace(/\[[^\]]*\]/g,'').trim()).filter(Boolean)}
+async function lrcSearch(q){const r=await fetch('https://lrclib.net/api/search?q='+encodeURIComponent(q));if(!r.ok)throw 0;return r.json()}
+let editId=null,editFromStage=false;
+function openLyrics(id,fromStage){editId=id;editFromStage=!!fromStage;const s=songs.find(x=>x.id===id);if(fromStage&&playing)togglePlay();$('#lyrSong').textContent=s.title;$('#lyrQ').value=(s.artist?s.artist+' ':'')+s.title;$('#lyrTxt').value=s.lrc||'';$('#lyrRes').innerHTML='';openM('mLyr')}
+let lyrResults=[];
+async function searchLyrics(){$('#lyrRes').innerHTML='<div class="hint">搜尋中…</div>';try{lyrResults=await lrcSearch($('#lyrQ').value.trim());const s=songs.find(x=>x.id===editId);lyrResults.sort((a,b)=>(!!b.syncedLyrics-!!a.syncedLyrics)||Math.abs(a.duration-s.duration)-Math.abs(b.duration-s.duration));
+  $('#lyrRes').innerHTML=lyrResults.slice(0,10).map((r,i)=>`<div class="res" onclick="useLyr(${i})"><b>${esc(r.trackName)}</b> <small>${esc(r.artistName)} · ${fmt(r.duration)}${Math.abs(r.duration-s.duration)<=4?' · 長度吻合':''}</small>${r.syncedLyrics?'<span class="tag ok">有時間軸</span>':r.plainLyrics?'<span class="tag no">純文字</span>':''}<br><small>${esc((r.plainLyrics||'').split('\n').slice(0,2).join(' / '))}</small></div>`).join('')||'<div class="hint">找不到，換個關鍵字（例如只打歌名）</div>'}catch(e){$('#lyrRes').innerHTML='<div class="hint">連不上歌詞庫，請確認網路</div>'}}
+function useLyr(i){const r=lyrResults[i];$('#lyrTxt').value=r.syncedLyrics||r.plainLyrics||'';$('#lyrRes').innerHTML='<div class="hint">已套用，可再微調後按「儲存」</div>'}
+function shiftLrc(d){$('#lyrTxt').value=$('#lyrTxt').value.replace(/\[(\d+):(\d+(?:\.\d+)?)\]/g,(m,a,b)=>{let t=Math.max(0,+a*60+ +b+d);return '['+String(t/60|0).padStart(2,'0')+':'+(t%60).toFixed(2).padStart(5,'0')+']'})}
+let s2tReady=null;
+function toTrad(){s2tReady=s2tReady||new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='s2t.js';sc.onload=ok;sc.onerror=no;document.head.appendChild(sc)});
+  s2tReady.then(()=>{const map={},A=[...S2T_C],B=[...S2T_T];for(let i=0;i<A.length;i++)map[A[i]]=B[i];map['着']='著';let t=$('#lyrTxt').value;for(const k in S2T_P)if(t.includes(k))t=t.split(k).join(S2T_P[k]);$('#lyrTxt').value=[...t].map(c=>map[c]||c).join('');toast('已轉成繁體')}).catch(()=>toast('轉換表載入失敗'))}
+async function saveLyrics(){const s=songs.find(x=>x.id===editId);s.lrc=$('#lyrTxt').value.trim();await dbPut(s);closeM('mLyr');renderBook();if(cur&&cur.song.id===s.id)loadLyricsForCur();toast('歌詞已儲存')}
+
+/* 手動對時：邊聽邊按 */
+let tap=null;
+function startTapSync(){if(cur)stopSong(false);const lines=plainLines($('#lyrTxt').value);if(!lines.length)return toast('先貼上歌詞文字');tap={lines,times:[],i:-1,started:false};closeM('mLyr');openM('mTap');renderTap()}
+function renderTap(){const i=tap.i;$('#tapPrev').textContent=tap.lines[i-1]||'';$('#tapCur').textContent=i<0?'準備好就按下面開始':tap.lines[i]||'';$('#tapNext').textContent=tap.lines[i+1]?'下一句：'+tap.lines[i+1]:(i>=0?'這是最後一句':'');$('#tapBtn').textContent=!tap.started?'開始播放':(tap.i+1<tap.lines.length?'▶ 第 '+(tap.i+2)+' 句開始唱':'完成')}
+async function tapNext(){if(!tap.started){tap.started=true;await loadSong(editId);startPlayback(0);renderTap();return}
+  if(tap.i+1<tap.lines.length){tap.i++;tap.times[tap.i]=pos();renderTap()}else endTap(true)}
+function tapUndo(){if(tap.i<0)return;const t=tap.times[tap.i]||0;tap.times.length=tap.i;tap.i--;seekTo(Math.max(0,t-4));renderTap()}
+function endTap(save){stopAudio();closeM('mTap');if(save){$('#lyrTxt').value=tap.lines.map((l,i)=>{const t=tap.times[i]??0;return '['+String(t/60|0).padStart(2,'0')+':'+(t%60).toFixed(2).padStart(5,'0')+'] '+l}).join('\n');toast('對時完成，記得按儲存')}cur=null;openM('mLyr')}
+
+/* ---------- 音訊引擎 ---------- */
+let ctx,psNode,mixIn,dryG,karaG,masterG,recDest,micStream,micSrc,micAna,monG,revG,cur=null,playing=false,src=null,t0=0,off=0,speed=1,keyShift=0,vmode='kara';
+function audioCtx(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'})}return ctx}
+const PS_CODE=`class PS extends AudioWorkletProcessor{constructor(){super();this.N=65536;this.b=[new Float32Array(65536),new Float32Array(65536)];this.w=0;this.p=0;this.r=1;this.W=2400;this.port.onmessage=e=>{this.r=e.data}}
+read(b,d){let x=this.w-d;while(x<0)x+=this.N;const i=x|0,f=x-i;return b[i]*(1-f)+b[(i+1)&65535]*f}
+process(ins,outs){const inp=ins[0],out=outs[0];const n=out[0].length;if(!inp||!inp.length){for(const o of out)o.fill(0);return true}
+for(let i=0;i<n;i++){for(let c=0;c<2;c++){const s=inp[c]||inp[0];this.b[c][this.w]=s[i]}
+if(Math.abs(this.r-1)<1e-4){for(let c=0;c<out.length;c++)out[c][i]=(inp[c]||inp[0])[i]}
+else{const p1=this.p,p2=(p1+.5)%1,d1=p1*this.W+3,d2=p2*this.W+3,g=Math.sin(Math.PI*p1),g1=g*g,g2=1-g1;for(let c=0;c<out.length;c++){const b=this.b[c];out[c][i]=this.read(b,d1)*g1+this.read(b,d2)*g2}}
+this.p+=(1-this.r)/this.W;this.p-=Math.floor(this.p);this.w=(this.w+1)&65535}return true}}
+registerProcessor('ps',PS);`;
+async function initGraph(){
+  const c=audioCtx();if(c.state==='suspended')await c.resume();
+  if(psNode)return;
+  try{await c.audioWorklet.addModule(URL.createObjectURL(new Blob([PS_CODE],{type:'application/javascript'})));psNode=new AudioWorkletNode(c,'ps',{outputChannelCount:[2]})}catch(e){console.warn(e);psNode=c.createGain()}
+  mixIn=c.createGain();dryG=c.createGain();karaG=c.createGain();masterG=c.createGain();
+  dryG.connect(psNode);karaG.connect(psNode);psNode.connect(masterG);masterG.connect(c.destination);
+  recDest=c.createMediaStreamDestination();masterG.connect(recDest);
+  // 消人聲：左右相減（去掉正中央的人聲）＋保留低音
+  const sp=c.createChannelSplitter(2),inv=c.createGain(),side=c.createGain(),midSum=c.createGain(),lp=c.createBiquadFilter();
+  inv.gain.value=-1;side.gain.value=0.8;midSum.gain.value=0.5;lp.type='lowpass';lp.frequency.value=140;
+  mixIn.connect(dryG);mixIn.connect(sp);
+  sp.connect(side,0);sp.connect(inv,1);inv.connect(side);
+  sp.connect(midSum,0);sp.connect(midSum,1);midSum.connect(lp);
+  side.channelCountMode='explicit';side.channelCount=1;lp.channelCountMode='explicit';
+  side.connect(karaG);lp.connect(karaG);
+  applyMode();
+}
+function applyMode(){if(!dryG)return;const m={orig:[1,0],guide:[0.35,0.75],kara:[0,1]}[vmode];if(cur&&cur.song.mono&&vmode!=='orig'){m[0]=1;m[1]=0}const t=ctx.currentTime;dryG.gain.setTargetAtTime(m[0],t,0.05);karaG.gain.setTargetAtTime(m[1],t,0.05);document.querySelectorAll('#vmode button').forEach(b=>b.classList.toggle('on',b.dataset.v===vmode))}
+function applyPitch(){if(psNode&&psNode.port)psNode.port.postMessage(Math.pow(2,keyShift/12)/speed);$('#kv').textContent='Key '+(keyShift>0?'+':'')+keyShift}
+function setKey(d){keyShift=Math.max(-6,Math.min(6,keyShift+d));applyPitch()}
+function cycleSpeed(){const L=[1,0.9,0.8,0.7];const p=pos();speed=L[(L.indexOf(speed)+1)%L.length];$('#bSpd').textContent='速度 '+speed.toFixed(1);if(playing){startPlayback(p)}applyPitch();if(speed<1)toast('慢速練習：音高不變')}
+const pos=()=>playing?off+(ctx.currentTime-t0)*speed:off;
+async function loadSong(id){
+  await initGraph();
+  const song=songs.find(x=>x.id===id);
+  const buf=await ctx.decodeAudioData(await song.file.arrayBuffer());
+  cur={song,buf,lines:[],credit:0,need:0,lineStat:{},userPts:[],url:null};
+  return cur;
+}
+function startPlayback(at){
+  if(src){src.onended=null;try{src.stop()}catch(e){}}
+  src=ctx.createBufferSource();src.buffer=cur.buf;src.playbackRate.value=speed;src.connect(mixIn);
+  off=Math.max(0,Math.min(at,cur.buf.duration-0.1));t0=ctx.currentTime;src.start(0,off);playing=true;
+  src.onended=()=>{if(playing&&pos()>=cur.buf.duration-0.3)finishSong()};
+  const v=$('#bgv');if(cur.song.isVideo&&cur.url){v.currentTime=off;v.playbackRate=speed;v.play().catch(()=>{})}
+  $('#pp').textContent='⏸';applyPitch();
+}
+function stopAudio(){if(src){src.onended=null;try{src.stop()}catch(e){}src=null}off=cur?pos():0;playing=false;$('#bgv').pause()}
+function togglePlay(){if(!cur)return;if(playing){stopAudio();$('#pp').textContent='▶'}else startPlayback(off)}
+function seekTo(t){if(!cur)return;if(playing)startPlayback(t);else{off=t;$('#bgv').currentTime=t}}
+function skip(d){seekTo(pos()+d)}
+
+/* ---------- 唱歌 ---------- */
+async function startSong(id){
+  try{await loadSong(id)}catch(e){toast('這首歌讀取失敗');return}
+  const s=cur.song;
+  $('#stTitle').textContent=s.title+(s.artist?' － '+s.artist:'')+'　🎤 '+singerOf(curSinger).name;
+  const v=$('#bgv');if(s.isVideo){cur.url=URL.createObjectURL(s.file);v.src=cur.url;v.hidden=false;$('#bgfx').style.display='none'}else{v.hidden=true;v.removeAttribute('src');$('#bgfx').style.display=''}
+  loadLyricsForCur();
+  loopAB=null;$('#bLoop').classList.remove('on');$('#live').textContent='';
+  $('#stage').classList.add('on');showCtrl();
+  if(s.mono)toast('這首是單聲道錄音，沒辦法消人聲，會播原唱',4000);
+  startPlayback(0);keepAwake(true);
+  if(!micStream&&LS.get('autoMic',false))toggleMic();
+  requestAnimationFrame(frame);
+}
+function loadLyricsForCur(){const l=cur.song.lrc||'';cur.lines=parseLrc(l);const pl=$('#plain');if(!cur.lines.length&&l){pl.style.display='block';pl.innerHTML=plainLines(l).map(esc).join('<br>');$('#lyr').style.display='none'}else{pl.style.display='none';$('#lyr').style.display=''}if(!l){$('#lyr').style.display='';}}
+function stopSong(ask){if(ask&&cur&&micStream&&pos()>30){if(confirm('要結束並看分數嗎？\n（按取消＝直接離開不計分）'))return finishSong()}stopAudio();if(rec&&rec.state==='recording')rec.stop();if(cur&&cur.url)URL.revokeObjectURL(cur.url);cur=null;$('#stage').classList.remove('on');keepAwake(false)}
+let hideT;
+function showCtrl(){$('#stage').classList.remove('hide');clearTimeout(hideT);hideT=setTimeout(()=>{if(playing)$('#stage').classList.add('hide')},4500)}
+$('#stage').addEventListener('pointerdown',e=>{if(e.target.closest('#ctrl,#topbar'))return showCtrl();showCtrl()});
+document.querySelectorAll('#vmode button').forEach(b=>b.onclick=()=>{vmode=b.dataset.v;applyMode();if(cur&&cur.song.mono&&vmode!=='orig')toast('單聲道歌曲無法消人聲')});
+$('#seek').addEventListener('input',e=>{if(cur)seekTo(e.target.value/1000*cur.buf.duration)});
+
+let loopAB=null;
+function curLineIdx(t){const L=cur.lines;let i=-1;for(let k=0;k<L.length;k++){if(L[k].t<=t)i=k;else break}return i}
+function toggleLoop(){if(loopAB){loopAB=null;$('#bLoop').classList.remove('on');return}if(!cur.lines.length)return toast('要有對時歌詞才能練單句');let i=Math.max(0,curLineIdx(pos()));const a=Math.max(0,cur.lines[i].t-1.2),b=(cur.lines[i+1]?cur.lines[i+1].t:cur.lines[i].t+6)+0.3;loopAB=[a,b];$('#bLoop').classList.add('on');toast('重複練：'+cur.lines[i].text+'（可配合慢速）');seekTo(a)}
+
+let lastV=0;
+function frame(){
+  if(!cur||!$('#stage').classList.contains('on'))return;
+  const t=pos(),D=cur.buf.duration;
+  if(loopAB&&t>=loopAB[1])seekTo(loopAB[0]);
+  $('#seek').value=t/D*1000;$('#tNow').textContent=fmt(t);$('#tLeft').textContent='-'+fmt(D-t);
+  // 影片同步
+  const v=$('#bgv');if(cur.song.isVideo&&playing&&performance.now()-lastV>1000){lastV=performance.now();if(Math.abs(v.currentTime-t)>0.25)v.currentTime=t}
+  // 歌詞
+  const L=cur.lines;
+  if(L.length){const i=curLineIdx(t);const ln=L[i],nx=L[i+1];
+    const l1=$('#l1'),l2=$('#l2');
+    if(i<0){l1.textContent='';l2.textContent=nx?nx.text:'';const w=nx.t-t;$('#dots').textContent=w<4?'●'.repeat(Math.ceil(w)):(t<1?'♪ 前奏 ♪':'')}
+    else{const end=nx?Math.min(nx.t,ln.t+Math.max(2,(nx.t-ln.t))):ln.t+5;const dur=Math.max(0.5,(end-ln.t)*0.92);
+      l1.textContent=ln.text||'♪';l1.style.setProperty('--p',Math.min(100,(t-ln.t)/dur*100)+'%');
+      l2.textContent=nx?nx.text:'';const w=nx?nx.t-t:99;$('#dots').textContent=(!ln.text||w>6)&&w<4?'●'.repeat(Math.ceil(w)):''}}
+  else if(!cur.song.lrc){$('#l1').textContent='（這首還沒有歌詞，按 📝 歌詞 找一下）';$('#l2').textContent='';$('#dots').textContent=''}
+  if(micAna&&playing)scoreTick(t);
+  drawPitch(t);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 麥克風、耳返、評分 ---------- */
+async function toggleMic(){
+  if(micStream){micStream.getTracks().forEach(x=>x.stop());micStream=null;micAna=null;if(micSrc)micSrc.disconnect();$('#bMic').classList.remove('on');$('#bMon').classList.remove('on');$('#live').textContent='';LS.set('autoMic',false);return}
+  try{micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false}})}catch(e){return toast('沒有拿到麥克風權限')}
+  await initGraph();
+  micSrc=ctx.createMediaStreamSource(micStream);micAna=ctx.createAnalyser();micAna.fftSize=2048;const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=70;micSrc.connect(hp);hp.connect(micAna);
+  // 耳返＋殘響
+  monG=ctx.createGain();monG.gain.value=0;revG=ctx.createGain();revG.gain.value=0.35;const cv=ctx.createConvolver();cv.buffer=makeReverb();
+  micSrc.connect(monG);monG.connect(ctx.destination);monG.connect(cv);cv.connect(revG);revG.connect(ctx.destination);
+  micMix=ctx.createGain();micMix.gain.value=1;micSrc.connect(micMix);cv.connect(revG);revG.connect(micMix);micMix.connect(recDest);
+  $('#bMic').classList.add('on');LS.set('autoMic',true);toast('評分開啟：建議戴耳機唱，分數比較準');
+}
+let micMix;
+function makeReverb(){const r=ctx.sampleRate,len=r*1.6,b=ctx.createBuffer(2,len,r);for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3)}return b}
+function toggleMon(){if(!micStream)return toast('先開 🎤 評分（麥克風）');const on=!$('#bMon').classList.contains('on');if(on&&!confirm('耳返會把你的聲音從喇叭放出來。\n請「戴耳機」使用，否則會嘯叫。\n要開啟嗎？'))return;monG.gain.setTargetAtTime(on?0.9:0,ctx.currentTime,0.03);$('#bMon').classList.toggle('on',on)}
+const tbuf=new Float32Array(2048);
+function yin(buf,sr,fmin=75,fmax=1000){const W=buf.length>>1;let rms=0;for(let i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);if(rms<0.012)return 0;
+  const tmin=Math.floor(sr/fmax),tmax=Math.min(W-1,Math.ceil(sr/fmin));const d=new Float32Array(tmax+1);
+  for(let tau=1;tau<=tmax;tau++){let s=0;for(let i=0;i<W;i++){const x=buf[i]-buf[i+tau];s+=x*x}d[tau]=s}
+  let run=0,best=-1;for(let tau=1;tau<=tmax;tau++){run+=d[tau];d[tau]=d[tau]*tau/(run||1)}
+  for(let tau=tmin;tau<tmax;tau++){if(d[tau]<0.15){while(tau+1<tmax&&d[tau+1]<d[tau])tau++;best=tau;break}}
+  if(best<0)return 0;const a=d[best-1],b=d[best],c=d[best+1]||b;const sh=(a-c)/(2*(a-2*b+c)||1);const f=sr/(best+(isFinite(sh)?sh:0));return 69+12*Math.log2(f/440)}
+let lastTick=0;
+const HOP=512/11025;
+function refAt(t){const r=cur.song.ref;if(!r)return 0;const i=Math.round(t/HOP);return r[i]||0}
+function inLine(t){const L=cur.lines;if(!L.length)return true;const i=curLineIdx(t);if(i<0)return false;const nx=L[i+1];return !!L[i].text&&(!nx||t<nx.t+0.3)&&t-L[i].t<12}
+function scoreTick(t){
+  const now=performance.now();if(now-lastTick<HOP*1000)return;lastTick=now;
+  micAna.getFloatTimeDomainData(tbuf);const um=yin(tbuf,ctx.sampleRate);
+  // 參考旋律（扣掉約 0.15 秒的反應時間，左右各容許一點誤差）
+  let bestD=99,refHere=0;for(let dt=-0.35;dt<=0.1;dt+=HOP){const rm=refAt(t+dt);if(!rm)continue;refHere=refHere||rm;if(um){const df=Math.abs(((um-(rm+keyShift))%12+18)%12-6);if(df<bestD)bestD=df}}
+  const rnow=refAt(t-0.1);
+  if(um)cur.userPts.push([t,um,bestD]);if(cur.userPts.length>600)cur.userPts.splice(0,200);
+  if(loopAB||speed!==1)return;// 練習時不計分
+  if(rnow&&inLine(t)){
+    const c=!um?0:bestD<=1?1:bestD<=2?0.6:bestD<=3?0.25:0.08;
+    cur.need++;cur.credit+=c;const li=Math.max(0,curLineIdx(t));const st=cur.lineStat[li]||(cur.lineStat[li]={n:0,c:0});st.n++;st.c+=c;
+    if(cur.need>20)$('#live').textContent=calcScore();
+  }
+}
+function calcScore(){if(!cur.need)return 0;const a=cur.credit/cur.need;if(a<0.02)return 0;return Math.round(Math.min(100,45+55*Math.pow(a,0.65)))}
+// 音高條：上方顯示原曲旋律（青色）與你的聲音（綠＝準，黃＝差一點，紅＝不準）
+function drawPitch(t){const cv=$('#pitch'),dpr=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(cv.width!==w*dpr){cv.width=w*dpr;cv.height=h*dpr}const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  if(!micAna||!cur.song.ref)return;g.fillStyle='rgba(0,0,0,.25)';g.fillRect(0,0,w,h);
+  const span=6,nowX=w*0.3,px=w/span,y=m=>{const pc=((m%12)+12)%12;return h-8-(pc/12)*(h-16)};
+  g.strokeStyle='rgba(255,255,255,.5)';g.beginPath();g.moveTo(nowX,0);g.lineTo(nowX,h);g.stroke();
+  const r=cur.song.ref;g.fillStyle='rgba(56,217,245,.55)';
+  for(let tt=t-span*0.3;tt<t+span*0.7;tt+=HOP){const m=refAt(tt);if(m&&inLine(tt)){g.fillRect(nowX+(tt-t)*px,y(m+keyShift)-3,px*HOP+1,6)}}
+  for(const [ut,um,d] of cur.userPts){if(ut<t-span*0.3)continue;g.fillStyle=d<=1?'#4be08a':d<=2?'#ffc94a':'#ff6b6b';g.beginPath();g.arc(nowX+(ut-t)*px,y(um),3.2,0,7);g.fill()}}
+
+function finishSong(){
+  if(!cur)return;stopAudio();const s=cur.song;const sc=calcScore();const had=micStream&&cur.need>30;
+  $('#scSong').textContent=s.title+' · '+singerOf(curSinger).name;
+  $('#scoreN').textContent=had?sc:'--';
+  $('#scWord').textContent=!had?'這次沒有開評分':sc>=93?'職業級！':sc>=85?'超好聽！':sc>=80?'唱得很好！':sc>=70?'不錯喔，再練練':'繼續加油～';
+  $('#scDetail').textContent=had?'音準命中率 '+Math.round(cur.credit/cur.need*100)+'%（80 分算唱得好，93 分以上是職業級）':'下次按「🎤 評分」就會打分數';
+  const ls=Object.entries(cur.lineStat).filter(([i,v])=>v.n>=6).map(([i,v])=>({i:+i,p:Math.round(v.c/v.n*100)}));
+  $('#scLines').innerHTML=ls.length?ls.map(x=>`<div class="lineacc"><span style="color:${x.p>=70?'var(--green)':x.p>=45?'var(--gold)':'var(--red)'}">${x.p}%</span><span style="flex:1">${esc(cur.lines[x.i]?cur.lines[x.i].text:'')}</span><button class="btn sm" onclick="practice(${x.i})">練</button></div>`).join(''):'<div class="hint">需要對時歌詞＋開啟評分才有逐句分析</div>';
+  practiceSong=s.id;practiceLines=cur.lines;
+  if(had){hist.push({singer:curSinger,songId:s.id,title:s.title,score:sc,date:Date.now()});LS.set('hist',hist)}
+  $('#scNext').textContent=queue.length?'下一首（'+(songs.find(x=>x.id===queue[0].songId)||{}).title+'）':'回歌本';
+  $('#scNext').onclick=queue.length?playNext:()=>startSong(practiceSong).then(()=>closeM('mScore'));if(!queue.length)$('#scNext').textContent='🔁 再唱一次';
+  if(rec&&rec.state==='recording'){rec._onstop=showRec;rec.stop()}else $('#scRec').innerHTML='';
+
+  $('#stage').classList.remove('on');keepAwake(false);if(cur.url)URL.revokeObjectURL(cur.url);cur=null;
+  openM('mScore');
+}
+let practiceSong,practiceLines;
+async function practice(i){closeM('mScore');await startSong(practiceSong);const a=Math.max(0,cur.lines[i].t-1.2),b=(cur.lines[i+1]?cur.lines[i+1].t:cur.lines[i].t+6)+0.3;loopAB=[a,b];$('#bLoop').classList.add('on');seekTo(a);toast('重複練這句，可以搭配「速度」放慢')}
+
+/* ---------- 錄音 ---------- */
+let rec,recChunks=[];
+function toggleRec(){
+  if(rec&&rec.state==='recording'){rec._onstop=showRecToast;rec.stop();return}
+  if(!micStream)return toast('先開 🎤 評分（麥克風）才能錄到你的聲音');
+  recChunks=[];const types=['audio/mp4','audio/webm;codecs=opus','audio/webm'];const mt=types.find(x=>window.MediaRecorder&&MediaRecorder.isTypeSupported(x))||'';
+  try{rec=new MediaRecorder(recDest.stream,mt?{mimeType:mt}:undefined)}catch(e){return toast('這個瀏覽器不支援錄音')}
+  rec.ondataavailable=e=>e.data.size&&recChunks.push(e.data);rec.onstop=()=>{$('#bRec').classList.remove('on');$('#bRec').textContent='⏺ 錄音';rec._onstop&&rec._onstop()};rec.start(1000);$('#bRec').classList.add('on');$('#bRec').textContent='⏹ 停止錄音';toast('錄音中（伴奏＋你的聲音）')}
+function recBlob(){return new Blob(recChunks,{type:rec.mimeType||'audio/webm'})}
+function recName(){return '歡唱錄音_'+new Date().toISOString().slice(0,16).replace(/[T:]/g,'-')+(/mp4/.test(rec.mimeType)?'.m4a':'.webm')}
+function showRec(){const u=URL.createObjectURL(recBlob());$('#scRec').innerHTML=`<audio controls src="${u}" style="width:100%"></audio><a class="btn sm" style="display:inline-block;margin-top:6px;text-decoration:none" href="${u}" download="${recName()}">⬇ 下載錄音</a>`}
+function showRecToast(){const u=URL.createObjectURL(recBlob());const a=document.createElement('a');a.href=u;a.download=recName();a.click();toast('錄音已下載')}
+
+/* ---------- 旋律分析（用來評分） ---------- */
+const MEL_WORKER=`onmessage=e=>{const x=e.data,sr=11025,W=512,HOP=512,tmin=11,tmax=147,n=Math.floor((x.length-W-tmax)/HOP),out=new Float32Array(Math.max(0,n));const d=new Float32Array(tmax+1);
+for(let f=0;f<n;f++){const o=f*HOP;let rms=0;for(let i=0;i<W;i++)rms+=x[o+i]*x[o+i];rms=Math.sqrt(rms/W);if(rms<0.02){continue}
+for(let tau=1;tau<=tmax;tau++){let s=0;for(let i=0;i<W;i++){const v=x[o+i]-x[o+i+tau];s+=v*v}d[tau]=s}
+let run=0;for(let tau=1;tau<=tmax;tau++){run+=d[tau];d[tau]=d[tau]*tau/(run||1)}
+let best=-1;for(let tau=tmin;tau<tmax;tau++){if(d[tau]<0.2){while(tau+1<tmax&&d[tau+1]<d[tau])tau++;best=tau;break}}
+if(best>0){out[f]=69+12*Math.log2(sr/best/440)}if(f%400===0)postMessage({p:f/n})}
+const m=new Float32Array(out.length);for(let i=0;i<out.length;i++){const w=[];for(let k=-2;k<=2;k++){const v=out[i+k];if(v)w.push(v)}if(w.length>=3&&out[i]){w.sort((a,b)=>a-b);m[i]=Math.round(w[w.length>>1])}}
+postMessage({done:m})}`;
+async function extractMelody(buf,onp){
+  const sr=11025,len=Math.ceil(buf.duration*sr);
+  const oc=new OfflineAudioContext(1,len,sr);const s=oc.createBufferSource();s.buffer=buf;
+  const hp=oc.createBiquadFilter();hp.type='highpass';hp.frequency.value=90;const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
+  s.connect(hp);hp.connect(lp);lp.connect(oc.destination);s.start();
+  const r=await oc.startRendering();const x=r.getChannelData(0).slice();
+  return new Promise(ok=>{const w=new Worker(URL.createObjectURL(new Blob([MEL_WORKER],{type:'application/javascript'})));w.onmessage=e=>{if(e.data.done){w.terminate();ok(e.data.done)}else onp&&onp(e.data.p)};w.onerror=()=>ok(null);w.postMessage(x,[x.buffer])})}
+
+
+/* ---------- 大螢幕：全螢幕、快捷鍵、螢幕不休眠 ---------- */
+const fsOK=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);
+if(!fsOK)$('#bFs').hidden=true;
+function toggleFs(){const d=document,e=d.documentElement;if(d.fullscreenElement||d.webkitFullscreenElement)(d.exitFullscreen||d.webkitExitFullscreen).call(d);else(e.requestFullscreen||e.webkitRequestFullscreen).call(e)}
+$('#stage').addEventListener('pointermove',e=>{if(e.pointerType==='mouse')showCtrl()});
+document.addEventListener('keydown',e=>{
+  if(!cur||!$('#stage').classList.contains('on')||e.target.closest('input,textarea')||document.querySelector('.modal.on'))return;
+  const k=e.key;let used=true;
+  if(k===' ')togglePlay();else if(k==='ArrowLeft')skip(-5);else if(k==='ArrowRight')skip(5);else if(k==='ArrowUp')setKey(1);else if(k==='ArrowDown')setKey(-1);
+  else if(k==='v'||k==='V'){const L=['orig','guide','kara'];vmode=L[(L.indexOf(vmode)+1)%3];applyMode();toast({orig:'原唱',guide:'導唱',kara:'伴唱'}[vmode],1200)}
+  else if(k==='m'||k==='M')toggleMic();else if(k==='l'||k==='L')toggleLoop();else if(k==='f'||k==='F')fsOK&&toggleFs();
+  else if(k==='Escape'&&!document.fullscreenElement)stopSong(true);else used=false;
+  if(used){e.preventDefault();showCtrl()}
+});
+let wakeLock=null;
+async function keepAwake(on){try{if(on&&navigator.wakeLock&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>wakeLock=null)}else if(!on&&wakeLock){wakeLock.release();wakeLock=null}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&cur)keepAwake(true)});
+
+/* ---------- 啟動 ---------- */
+(async()=>{
+  renderChip();renderQueue();
+  try{await openDB();songs=await dbAll();if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){toast('這個瀏覽器無法儲存歌曲（請勿用無痕模式）',5000)}
+  renderBook();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
