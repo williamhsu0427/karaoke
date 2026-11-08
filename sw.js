@@ -1,5 +1,5 @@
 // 離線也能打開 App；歌曲存在手機的資料庫裡，不經過這裡
-const C = 'karaoke-v2';
+const C = 'karaoke-v3';
 const SHELL = ['./', 'index.html', 's2t.js', 'manifest.json', 'icon-192.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== C).map(k => caches.delete(k))))); self.clients.claim(); });
