@@ -129,7 +129,7 @@ kbd{background:var(--card2);border:1px solid var(--line);border-radius:5px;paddi
     <div class="row">
       <input type="search" id="q" placeholder="搜尋歌名、歌手" oninput="renderBook()">
       <button class="btn pri" onclick="$('#file').click()" style="white-space:nowrap">＋ 加歌</button>
-      <button class="btn yt" onclick="openYt()" style="white-space:nowrap">▶ YouTube</button>
+      <button class="btn yt" onclick="openYt()" style="white-space:nowrap">🔍 YouTube</button>
     </div>
     <input type="file" id="file" accept="audio/*,video/*,.mp3,.m4a,.mp4,.wav,.flac,.ogg,.webm,.mov" multiple hidden onchange="addFiles([...this.files]);this.value=''">
     <div id="addProg" hidden><div class="hint" id="addMsg"></div><div class="prog"><i id="addBar"></i></div></div>
@@ -202,11 +202,19 @@ kbd{background:var(--card2);border:1px solid var(--line);border-radius:5px;paddi
 
 <!-- YouTube -->
 <div class="modal" id="mYt"><div class="sheet">
-  <h2>加入 YouTube 影片</h2>
+  <h2>搜尋 YouTube</h2>
+  <div class="row"><input type="search" id="ytQ" placeholder="歌名或歌手" onkeydown="if(event.key==='Enter')ytSearch()"><button class="btn yt" style="white-space:nowrap" onclick="ytSearch()">搜尋</button></div>
+  <label class="hint" style="display:flex;align-items:center;gap:6px;margin-top:6px"><input type="checkbox" id="ytKtv" checked> 只找 KTV 伴唱版（沒有人聲）</label>
+  <div id="ytRes"></div>
+  <details id="ytKeyBox" style="margin-top:10px"><summary class="hint">YouTube 金鑰設定</summary>
+    <div class="hint" style="margin:6px 0">在 App 裡搜尋需要一組免費的 YouTube 金鑰（每天約可搜尋 100 次）。申請方法請看 Claude 給你的說明，貼上後按儲存，只會存在這台裝置。</div>
+    <div class="row"><input type="text" id="ytKey" placeholder="貼上金鑰（AIza 開頭）"><button class="btn" style="white-space:nowrap" onclick="saveYtKey()">儲存</button></div>
+  </details>
+  <h3>或直接貼連結</h3>
   <input type="text" id="ytUrl" placeholder="貼上 YouTube 連結（例如 https://youtu.be/...）">
   <div class="row" style="margin-top:8px"><button class="btn" style="flex:1" onclick="closeM('mYt')">取消</button><button class="btn pri" style="flex:2" onclick="addYt()">加入歌本</button></div>
-  <h3>想要沒有人聲的版本？</h3>
-  <div class="hint">YouTube 影片的聲音網頁拿不到，所以沒辦法幫它消人聲。最好的做法是直接找「KTV 伴唱版」影片，人聲已經去掉了。輸入歌名後按下面按鈕，會開 YouTube 幫你搜尋，複製喜歡的影片連結回來貼上就好。</div>
+  <h3>沒有金鑰時：到 YouTube 找伴唱版</h3>
+  <div class="hint">會開 YouTube 搜尋「KTV 伴唱」，複製影片連結回來貼上就好。</div>
   <div class="row" style="margin-top:8px"><input type="text" id="ytFind" placeholder="歌名（可加歌手）"><button class="btn yt" style="white-space:nowrap" onclick="findKtv($('#ytFind').value)">找伴唱版</button></div>
 </div></div>
 
@@ -571,7 +579,23 @@ async function extractMelody(buf,onp){
 let yp=null,ytReady=null;
 function ytApi(){return ytReady=ytReady||new Promise(ok=>{window.onYouTubeIframeAPIReady=ok;const sc=document.createElement('script');sc.src='https://www.youtube.com/iframe_api';sc.onerror=()=>toast('載入 YouTube 失敗，請確認網路');document.head.appendChild(sc)})}
 function ytId(u){u=(u||'').trim();const m=u.match(/(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/);if(m)return m[1];if(/^[\w-]{11}$/.test(u))return u;return null}
-function openYt(){$('#ytUrl').value='';$('#ytFind').value='';openM('mYt');setTimeout(()=>$('#ytUrl').focus(),100)}
+function openYt(){$('#ytUrl').value='';$('#ytFind').value='';$('#ytKey').value=LS.get('ytKey','');$('#ytKeyBox').open=!LS.get('ytKey','');openM('mYt');setTimeout(()=>$('#ytQ').focus(),100)}
+function saveYtKey(){const k=$('#ytKey').value.trim();LS.set('ytKey',k);$('#ytKeyBox').open=false;toast(k?'金鑰已儲存，可以搜尋了':'已清除金鑰')}
+const unesc=t=>{const e=document.createElement('textarea');e.innerHTML=t;return e.value};
+let ytList=[];
+async function ytSearch(){
+  const q=$('#ytQ').value.trim();if(!q)return toast('先輸入歌名');const key=LS.get('ytKey','');
+  if(!key){$('#ytKeyBox').open=true;$('#ytRes').innerHTML='<div class="hint" style="margin-top:8px">還沒有設定金鑰，請在下面貼上；或用最下方的「找伴唱版」到 YouTube 找。</div>';return}
+  $('#ytRes').innerHTML='<div class="hint" style="margin-top:8px">搜尋中…</div>';
+  const u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15&regionCode=TW&q='+encodeURIComponent(q+($('#ytKtv').checked?' KTV 伴唱':''))+'&key='+encodeURIComponent(key);
+  try{const r=await fetch(u);const j=await r.json();
+    if(j.error){const why=(j.error.errors&&j.error.errors[0]&&j.error.errors[0].reason)||'';$('#ytRes').innerHTML='<div class="hint" style="margin-top:8px;color:var(--red)">'+(why==='quotaExceeded'?'今天的搜尋次數用完了，明天會恢復（下午 3 點左右重置）':/key|API_KEY|forbidden|blocked/i.test(why+j.error.message)?'金鑰不能用，請確認有啟用 YouTube Data API v3、網站限制有加上 williamhsu0427.github.io':'搜尋失敗：'+esc(j.error.message))+'</div>';return}
+    ytList=(j.items||[]).map(it=>({id:it.id.videoId,title:unesc(it.snippet.title),ch:unesc(it.snippet.channelTitle),th:(it.snippet.thumbnails.medium||it.snippet.thumbnails.default).url}));
+    $('#ytRes').innerHTML=ytList.map((v,i)=>{const have=songs.some(s=>s.yt===v.id);return `<div class="res" style="display:flex;gap:10px;align-items:center;cursor:default"><img src="${esc(v.th)}" style="width:96px;height:54px;object-fit:cover;border-radius:8px;flex:none" loading="lazy"><div style="flex:1;min-width:0"><div style="font-size:14px;line-height:1.35;max-height:2.7em;overflow:hidden">${esc(v.title)}</div><small>${esc(v.ch)}</small><div class="row" style="margin-top:5px;gap:6px">${have?'<span class="tag ok" style="margin:0">已在歌本</span>':`<button class="btn sm" onclick="ytPick(${i},false,this)">＋ 歌本</button><button class="btn sm pri" onclick="ytPick(${i},true,this)">預約</button>`}</div></div></div>`}).join('')||'<div class="hint" style="margin-top:8px">找不到影片，換個關鍵字試試</div>';
+  }catch(e){$('#ytRes').innerHTML='<div class="hint" style="margin-top:8px">連不上 YouTube，請確認網路</div>'}
+}
+async function ytPick(i,andQueue,btn){const v=ytList[i];btn.disabled=true;const song=await addYtById(v.id,{raw:v.title,author:v.ch});if(!song)return;
+  btn.parentNode.innerHTML='<span class="tag ok" style="margin:0">'+(andQueue?'已預約':'已加入歌本')+'</span>';if(andQueue)enqueue(song.id,false)}
 function findKtv(q){q=(q||'').trim();if(!q)return toast('先輸入歌名');window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' KTV 伴唱'),'_blank')}
 function cleanYtTitle(t,author){
   const karaoke=/KTV|伴唱|卡拉|karaoke|instrumental|純音樂|導唱/i.test(t);
@@ -589,13 +613,17 @@ function cleanYtTitle(t,author){
 async function addYt(){
   const id=ytId($('#ytUrl').value);if(!id)return toast('看不懂這個連結，請貼 YouTube 影片網址');
   if(songs.some(s=>s.yt===id)){closeM('mYt');return toast('這部影片已經在歌本裡了')}
-  let info=null;const url='https://www.youtube.com/watch?v='+id;
-  for(const api of ['https://www.youtube.com/oembed?format=json&url=','https://noembed.com/embed?url=']){try{const r=await fetch(api+encodeURIComponent(url));if(r.ok){info=await r.json();if(info.title)break}}catch(e){}}
+  if(await addYtById(id))closeM('mYt');
+}
+async function addYtById(id,pre){
+  const old=songs.find(s=>s.yt===id);if(old)return old;
+  let info=pre&&pre.raw?{title:pre.raw,author_name:pre.author}:null;const url='https://www.youtube.com/watch?v='+id;
+  if(!info)for(const api of ['https://www.youtube.com/oembed?format=json&url=','https://noembed.com/embed?url=']){try{const r=await fetch(api+encodeURIComponent(url));if(r.ok){info=await r.json();if(info.title)break}}catch(e){}}
   const raw=info&&info.title||'YouTube 影片 '+id;const {title,artist,karaoke}=cleanYtTitle(raw,info&&info.author_name);
   const song={id:'y'+Date.now().toString(36),yt:id,title,artist,rawTitle:raw,duration:0,lrc:'',added:Date.now(),offset:0,showLyr:true};
-  await dbPut(song);songs.push(song);closeM('mYt');renderBook();
-  toast('已加入，正在找歌詞…',2500);
-  autoLyrics(song);
+  await dbPut(song);songs.push(song);renderBook();
+  toast('已加入「'+title+'」，正在找歌詞…',2500);
+  autoLyrics(song);return song;
 }
 async function ytStart(vid){
   await ytApi();ytDestroy();
