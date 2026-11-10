@@ -285,9 +285,11 @@ async function addFiles(files){
   $('#addProg').hidden=true;renderBook();
 }
 function isMono(buf){if(buf.numberOfChannels<2)return true;const a=buf.getChannelData(0),b=buf.getChannelData(1);let d=0,s=0;for(let i=0;i<a.length;i+=97){d+=Math.abs(a[i]-b[i]);s+=Math.abs(a[i])}return d<s*0.02}
-async function autoLyrics(song){
-  try{const r=await lrcSearch(song.artist?song.artist+' '+song.title:song.title);
-    const best=pickBest(r,song);if(best){song.lrc=best.syncedLyrics;await dbPut(song);renderBook();toast('已自動找到《'+song.title+'》的歌詞')}}catch(e){}
+async function autoLyrics(song,quiet){
+  const qs=[...new Set([song.artist?song.artist+' '+song.title:'',song.title,song.rawTitle?song.rawTitle.replace(/[【】《》\[\]()（）|｜]/g,' ').replace(/KTV|伴唱版?|卡拉OK|Karaoke|Official|MV|Music Video|導唱|字幕/ig,' ').replace(/\s+/g,' ').trim():''].filter(Boolean))];
+  for(const q of qs){try{const r=await lrcSearch(q);const best=pickBest(r,song);
+    if(best){song.lrc=best.syncedLyrics;await dbPut(song);renderBook();if(cur&&cur.song.id===song.id)loadLyricsForCur();toast('已自動找到《'+song.title+'》的歌詞');return true}}catch(e){if(!quiet)toast('連不上歌詞庫，請確認網路');return false}}
+  if(!quiet)toast('找不到《'+song.title+'》的歌詞，可以按 📝 歌詞 改用歌名搜尋',5000);return false
 }
 function pickBest(list,song){const c=list.filter(x=>x.syncedLyrics);if(!c.length)return null;if(!song.duration)return c[0];c.sort((a,b)=>Math.abs(a.duration-song.duration)-Math.abs(b.duration-song.duration));return Math.abs(c[0].duration-song.duration)<=4?c[0]:null}
 function renderBook(){
@@ -426,7 +428,7 @@ async function startSong(id){
   loopAB=null;$('#bLoop').classList.remove('on');$('#live').textContent='';
   $('#stage').classList.add('on');showCtrl();
   if(s.mono)toast('這首是單聲道錄音，沒辦法消人聲，會播原唱',4000);
-  if(s.yt){playing=false;$('#pp').textContent='▶';ytStart(s.yt)}else startPlayback(0);keepAwake(true);
+  if(s.yt){playing=false;$('#pp').textContent='▶';ytStart(s.yt);if(!s.lrc)autoLyrics(s)}else startPlayback(0);keepAwake(true);
   if(!micStream&&LS.get('autoMic',false))toggleMic();
   requestAnimationFrame(frame);
 }
@@ -573,7 +575,10 @@ function openYt(){$('#ytUrl').value='';$('#ytFind').value='';openM('mYt');setTim
 function findKtv(q){q=(q||'').trim();if(!q)return toast('先輸入歌名');window.open('https://www.youtube.com/results?search_query='+encodeURIComponent(q+' KTV 伴唱'),'_blank')}
 function cleanYtTitle(t,author){
   const karaoke=/KTV|伴唱|卡拉|karaoke|instrumental|純音樂|導唱/i.test(t);
+  t=t.replace(/[【《「『\[]\s*(KTV|伴唱|卡拉OK|Karaoke|MV|導唱|純伴奏)[^】》」』\]]*[】》」』\]]/ig,' ');
   let x=t.replace(/[\(（\[][^\)）\]]*[\)）\]]/g,' ').replace(/[\(（\[]?(官方|official|完整|高清|HD|4K|Lyrics?|動態歌詞|歌詞版?|MV|Music Video|Audio|KTV|伴唱|卡拉OK|Karaoke|Instrumental|純音樂|導唱|字幕)[^\)）\]]*[\)）\]]?/ig,' ');
+  x=x.replace(/[【《「『\[]\s*(KTV|伴唱|卡拉OK|Karaoke|MV|導唱|純伴奏)[^】》」』\]]*[】》」』\]]/ig,' ').replace(/純伴奏|伴奏版?|伴唱版?/g,' ');
+  if(!/\s[-－–|｜]\s/.test(x)){const h=x.match(/^(.*[\u3400-\u9fff].*?)\s*[-－–｜|]\s*(.*[\u3400-\u9fff].*)$/);if(h)x=h[1]+' - '+h[2]}
   let title='',artist='';const b=x.match(/[【《「『]([^】》」』]+)[】》」』]/);
   if(b){title=b[1];artist=x.replace(b[0],' ')}else{const m=x.split(/\s+[-－–|｜]\s+/);if(m.length>=2){artist=m[0];title=m[1]}else{title=x;artist=author||''}}
   const clean=v=>v.replace(/[\(（][^\)）]*[\)）]/g,' ').replace(/[【】《》「」『』]/g,' ').replace(/\s+/g,' ').trim();
@@ -587,9 +592,9 @@ async function addYt(){
   let info=null;const url='https://www.youtube.com/watch?v='+id;
   for(const api of ['https://www.youtube.com/oembed?format=json&url=','https://noembed.com/embed?url=']){try{const r=await fetch(api+encodeURIComponent(url));if(r.ok){info=await r.json();if(info.title)break}}catch(e){}}
   const raw=info&&info.title||'YouTube 影片 '+id;const {title,artist,karaoke}=cleanYtTitle(raw,info&&info.author_name);
-  const song={id:'y'+Date.now().toString(36),yt:id,title,artist,rawTitle:raw,duration:0,lrc:'',added:Date.now(),offset:0,showLyr:!karaoke};
+  const song={id:'y'+Date.now().toString(36),yt:id,title,artist,rawTitle:raw,duration:0,lrc:'',added:Date.now(),offset:0,showLyr:true};
   await dbPut(song);songs.push(song);closeM('mYt');renderBook();
-  toast(karaoke?'已加入（伴唱版影片，字幕預設關閉）':'已加入，正在找歌詞…',3500);
+  toast('已加入，正在找歌詞…',2500);
   autoLyrics(song);
 }
 async function ytStart(vid){
@@ -629,6 +634,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 (async()=>{
   renderChip();renderQueue();
   try{await openDB();songs=await dbAll();if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){toast('這個瀏覽器無法儲存歌曲（請勿用無痕模式）',5000)}
+  if(!LS.get('lyrMig1',false)){for(const s of songs)if(s.yt&&s.showLyr===false){s.showLyr=true;dbPut(s)}LS.set('lyrMig1',true)}
   renderBook();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
